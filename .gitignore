@@ -1,0 +1,33 @@
+# Go
+/bin/
+*.exe
+*.test
+*.out
+coverage.out
+*.coverprofile
+
+# Node / TypeScript
+node_modules/
+dist/
+build/
+.next/
+coverage/
+*.tsbuildinfo
+
+# Env & secrets
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+.cursor/tmp/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
