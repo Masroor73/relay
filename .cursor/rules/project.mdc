@@ -1,0 +1,12 @@
+---
+description: Relay project context and constraints — always active
+alwaysApply: true
+---
+
+This project is Relay — see ARCHITECTURE.md and docs/DECISIONS.md at the repo root for full context.
+
+- Stack is fixed: Go (ingestion/processor), PostgreSQL, React + TypeScript (dashboard), Node/TypeScript (MCP server). Do not introduce other languages or frameworks without being explicitly asked to reconsider.
+- Idempotency is enforced via the DB's UNIQUE constraint on idempotency_key, not application-level check-then-insert.
+- DATABASE_URL must work unchanged against local Docker Postgres and Neon — no environment-specific branching in code.
+- Every log line touching an event must include event_id.
+- Stay scoped to the current milestone/issue being worked on — flag if a request would expand scope rather than silently building it.
