@@ -12,6 +12,7 @@ import (
 func New(cfg *config.Config, db *sql.DB) *http.Server {
 	mux := http.NewServeMux()
 
+	mux.HandleFunc("GET /health", healthHandler)
 	mux.HandleFunc("POST /webhooks/stripe", stripeWebhookHandler(db, cfg.StripeWebhookSecret))
 
 	return &http.Server{
