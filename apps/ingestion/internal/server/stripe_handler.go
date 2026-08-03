@@ -13,12 +13,16 @@ import (
 )
 
 const pgUniqueViolation = "23505"
+const maxWebhookBodyBytes = 1 << 20 // 1MB — comfortably covers real Stripe payloads while blocking abuse
 
 func stripeWebhookHandler(db *sql.DB, webhookSecret string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		r.Body = http.MaxBytesReader(w, r.Body, maxWebhookBodyBytes)
+
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
-			http.Error(w, "failed to read request body", http.StatusBadRequest)
+			log.Printf("event_id=unknown request body error: %v", err)
+			http.Error(w, "request body too large", http.StatusRequestEntityTooLarge)
 			return
 		}
 
