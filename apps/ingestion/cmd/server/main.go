@@ -4,11 +4,18 @@ package main
 import (
 	"database/sql"
 	"log"
+	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 
 	"github.com/Masroor73/relay/apps/ingestion/internal/config"
 	"github.com/Masroor73/relay/apps/ingestion/internal/server"
+)
+
+const (
+	maxOpenConns    = 10
+	maxIdleConns    = 5
+	connMaxLifetime = 30 * time.Minute
 )
 
 func main() {
@@ -22,6 +29,10 @@ func main() {
 		log.Fatalf("failed to open database connection: %v", err)
 	}
 	defer db.Close()
+
+	db.SetMaxOpenConns(maxOpenConns)
+	db.SetMaxIdleConns(maxIdleConns)
+	db.SetConnMaxLifetime(connMaxLifetime)
 
 	srv := server.New(cfg, db)
 
