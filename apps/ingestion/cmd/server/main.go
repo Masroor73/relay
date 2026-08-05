@@ -3,12 +3,14 @@ package main
 
 import (
 	"database/sql"
-	"log"
+	"log/slog"
+	"os"
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 
 	"github.com/Masroor73/relay/apps/ingestion/internal/config"
+	"github.com/Masroor73/relay/apps/ingestion/internal/logging"
 	"github.com/Masroor73/relay/apps/ingestion/internal/server"
 )
 
@@ -19,14 +21,19 @@ const (
 )
 
 func main() {
+	logger := logging.New()
+	slog.SetDefault(logger)
+
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("config error: %v", err)
+		slog.Error("config error", "error", err)
+		os.Exit(1)
 	}
 
 	db, err := sql.Open("pgx", cfg.DatabaseURL)
 	if err != nil {
-		log.Fatalf("failed to open database connection: %v", err)
+		slog.Error("failed to open database connection", "error", err)
+		os.Exit(1)
 	}
 	defer db.Close()
 
@@ -36,8 +43,9 @@ func main() {
 
 	srv := server.New(cfg, db)
 
-	log.Printf("ingestion service starting on port %s", cfg.Port)
+	slog.Info("ingestion service starting", "port", cfg.Port)
 	if err := srv.ListenAndServe(); err != nil {
-		log.Fatalf("server error: %v", err)
+		slog.Error("server error", "error", err)
+		os.Exit(1)
 	}
 }

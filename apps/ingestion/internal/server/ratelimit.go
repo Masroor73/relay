@@ -5,6 +5,7 @@
 package server
 
 import (
+	"log/slog"
 	"net"
 	"net/http"
 	"sync"
@@ -49,6 +50,7 @@ func rateLimitMiddleware(rl *ipRateLimiter, next http.HandlerFunc) http.HandlerF
 
 		limiter := rl.getLimiter(ip)
 		if !limiter.Allow() {
+			slog.Warn("rate limit exceeded", "event_id", "unknown", "ip", ip)
 			http.Error(w, "rate limit exceeded", http.StatusTooManyRequests)
 			return
 		}
