@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 
 	"github.com/jackc/pgx/v5/pgconn"
@@ -21,7 +21,7 @@ func stripeWebhookHandler(db *sql.DB, webhookSecret string) http.HandlerFunc {
 
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
-			log.Printf("event_id=unknown request body error: %v", err)
+			slog.Warn("request body error", "event_id", "unknown", "error", err)
 			http.Error(w, "request body too large", http.StatusRequestEntityTooLarge)
 			return
 		}
@@ -29,7 +29,7 @@ func stripeWebhookHandler(db *sql.DB, webhookSecret string) http.HandlerFunc {
 		signatureHeader := r.Header.Get("Stripe-Signature")
 		event, err := stripewebhook.VerifySignature(body, signatureHeader, webhookSecret)
 		if err != nil {
-			log.Printf("event_id=unknown signature verification failed: %v", err)
+			slog.Warn("signature verification failed", "event_id", "unknown", "error", err)
 			http.Error(w, "invalid signature", http.StatusUnauthorized)
 			return
 		}
@@ -41,16 +41,16 @@ func stripeWebhookHandler(db *sql.DB, webhookSecret string) http.HandlerFunc {
 		if err != nil {
 			var pgErr *pgconn.PgError
 			if errors.As(err, &pgErr) && pgErr.Code == pgUniqueViolation {
-				log.Printf("event_id=%s duplicate delivery, already recorded", event.ID)
+				slog.Info("duplicate delivery, already recorded", "event_id", event.ID)
 				w.WriteHeader(http.StatusOK)
 				return
 			}
-			log.Printf("event_id=%s failed to persist event: %v", event.ID, err)
+			slog.Error("failed to persist event", "event_id", event.ID, "error", err)
 			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}
 
-		log.Printf("event_id=%s accepted", event.ID)
+		slog.Info("event accepted", "event_id", event.ID)
 		w.WriteHeader(http.StatusOK)
 	}
 }
