@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-lint-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/ingestion
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.3'
+          cache-dependency-path: apps/ingestion/go.sum
+
+      - name: Build
+        run: go build ./...
+
+      - name: Install golangci-lint
+        run: |
+          mkdir -p $HOME/.local/bin
+          export GOBIN=$HOME/.local/bin
+          export PATH=$GOBIN:$PATH
+          go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Lint
+        run: golangci-lint run
+
+      - name: Test
+        run: go test ./...
