@@ -26,10 +26,16 @@ jobs:
       - name: Build
         run: go build ./...
 
+      - name: Install golangci-lint
+        run: |
+          mkdir -p $HOME/.local/bin
+          export GOBIN=$HOME/.local/bin
+          export PATH=$GOBIN:$PATH
+          go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
       - name: Lint
-        uses: golangci/golangci-lint-action@v6
-        with:
-          working-directory: apps/ingestion
+        run: golangci-lint run
 
       - name: Test
         run: go test ./...
