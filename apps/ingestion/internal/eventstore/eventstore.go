@@ -9,6 +9,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log/slog"
 
 	"github.com/jackc/pgx/v5/pgconn"
 )
@@ -28,7 +29,11 @@ func Insert(ctx context.Context, db *sql.DB, idempotencyKey, source string, payl
 	if err != nil {
 		return fmt.Errorf("begin transaction: %w", err)
 	}
-	defer tx.Rollback() // no-op if the transaction was already committed
+	defer func() {
+		if err := tx.Rollback(); err != nil && !errors.Is(err, sql.ErrTxDone) {
+			slog.Error("failed to rollback transaction", "error", err)
+		}
+	}()
 
 	var eventID string
 	err = tx.QueryRowContext(ctx,
