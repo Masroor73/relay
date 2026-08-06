@@ -32,7 +32,7 @@ func stripeWebhookHandler(db *sql.DB, webhookSecret string) http.HandlerFunc {
 			return
 		}
 
-		err = eventstore.Insert(db, event.ID, "stripe", body)
+		err = eventstore.Insert(r.Context(), db, event.ID, "stripe", body)
 		if err != nil {
 			if errors.Is(err, eventstore.ErrDuplicateEvent) {
 				slog.Info("duplicate delivery, already recorded", "event_id", event.ID)
