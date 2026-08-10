@@ -5,7 +5,6 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"log/slog"
 	"os"
 
@@ -15,6 +14,7 @@ import (
 	"github.com/Masroor73/relay/apps/ingestion/internal/db"
 	"github.com/Masroor73/relay/apps/ingestion/internal/logging"
 	"github.com/Masroor73/relay/apps/ingestion/internal/outbox"
+	"github.com/Masroor73/relay/apps/ingestion/internal/processor"
 )
 
 func main() {
@@ -34,13 +34,5 @@ func main() {
 	defer conn.Close()
 
 	slog.Info("processor service starting")
-
-	// Placeholder handler — real downstream effect execution (writing to
-	// orders, per ARCHITECTURE.md §6) lands in ENG-26.
-	handler := func(ctx context.Context, tx *sql.Tx, row outbox.OutboxRow) error {
-		slog.Info("processing outbox row (placeholder handler)", "event_id", row.EventID)
-		return nil
-	}
-
-	outbox.Poll(context.Background(), conn, handler)
+	outbox.Poll(context.Background(), conn, processor.HandlePaymentIntentSucceeded)
 }
