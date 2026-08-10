@@ -12,7 +12,7 @@ dev:
 
 ## test: runs the Go test suite
 test:
-	cd apps/ingestion && go test ./...
+	cd apps/ingestion && go test -p 1 ./...
 
 ## migrate: applies database migrations against DATABASE_URL
 migrate:
