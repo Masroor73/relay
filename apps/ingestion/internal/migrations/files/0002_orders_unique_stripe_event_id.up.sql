@@ -1,0 +1,1 @@
+ALTER TABLE orders ADD CONSTRAINT orders_stripe_event_id_unique UNIQUE (stripe_event_id);

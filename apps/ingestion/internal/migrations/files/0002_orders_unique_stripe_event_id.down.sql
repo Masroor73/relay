@@ -1,0 +1,1 @@
+ALTER TABLE orders DROP CONSTRAINT orders_stripe_event_id_unique;
