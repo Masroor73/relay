@@ -15,7 +15,7 @@ import (
 const pollInterval = 2 * time.Second
 
 // MaxAttempts is the number of processing attempts allowed before a row is
-// promoted to the dead-letter table (ENG-28) rather than retried again.
+// promoted to the dead-letter table rather than retried again.
 const MaxAttempts = 6
 
 // OutboxRow represents a single claimed row pending processing.
@@ -74,18 +74,24 @@ func ProcessOnce(ctx context.Context, db *sql.DB, handle Handler) {
 	}
 
 	if handleErr := handle(ctx, tx, row); handleErr != nil {
-		slog.Warn("failed to process outbox row, scheduling retry", "event_id", row.EventID, "attempt", row.AttemptCount+1, "error", handleErr)
-
-		// Roll back explicitly here, before scheduling the retry — the
-		// retry update runs on a separate pooled connection and would
+		// Roll back explicitly here, before any follow-up write on a
+		// separate connection — the retry/dead-letter update would
 		// otherwise deadlock waiting for this transaction's row lock to
-		// release, which only happens once this function returns (via the
-		// deferred rollback above). Explicit rollback here releases the
-		// lock immediately instead.
+		// release (see ENG-27).
 		if err := tx.Rollback(); err != nil && !errors.Is(err, sql.ErrTxDone) {
 			slog.Error("failed to rollback transaction", "error", err)
 		}
 
+		newAttemptCount := row.AttemptCount + 1
+		if newAttemptCount >= MaxAttempts {
+			slog.Warn("max attempts exhausted, promoting to dead letter", "event_id", row.EventID, "attempt", newAttemptCount, "error", handleErr)
+			if err := promoteToDeadLetter(ctx, db, row, handleErr.Error()); err != nil {
+				slog.Error("failed to promote to dead letter", "event_id", row.EventID, "error", err)
+			}
+			return
+		}
+
+		slog.Warn("failed to process outbox row, scheduling retry", "event_id", row.EventID, "attempt", newAttemptCount, "error", handleErr)
 		if err := scheduleRetry(ctx, db, row); err != nil {
 			slog.Error("failed to schedule retry", "event_id", row.EventID, "error", err)
 		}
