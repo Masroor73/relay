@@ -44,7 +44,12 @@ func Poll(ctx context.Context, db *sql.DB, handle Handler) {
 			slog.Info("outbox polling stopped")
 			return
 		case <-ticker.C:
-			ProcessOnce(ctx, db, handle)
+			// Deliberately uses context.Background() here, not ctx: once
+			// a poll cycle has started, it must run to completion
+			// (drain) rather than have its in-flight DB transaction
+			// aborted mid-write by the same signal telling the loop not
+			// to start any *new* work. ctx only gates the next tick.
+			ProcessOnce(context.Background(), db, handle)
 		}
 	}
 }
