@@ -12,6 +12,7 @@ type Config struct {
 	Port                string
 	DatabaseURL         string
 	StripeWebhookSecret string
+	DashboardPassword   string
 }
 
 // Load reads configuration for the ingestion service and returns an error
@@ -21,6 +22,7 @@ func Load() (*Config, error) {
 		Port:                getEnvOrDefault("PORT", "8080"),
 		DatabaseURL:         os.Getenv("DATABASE_URL"),
 		StripeWebhookSecret: os.Getenv("STRIPE_WEBHOOK_SECRET"),
+		DashboardPassword:   os.Getenv("DASHBOARD_PASSWORD"),
 	}
 
 	if cfg.DatabaseURL == "" {
@@ -28,6 +30,9 @@ func Load() (*Config, error) {
 	}
 	if cfg.StripeWebhookSecret == "" {
 		return nil, fmt.Errorf("STRIPE_WEBHOOK_SECRET is required")
+	}
+	if cfg.DashboardPassword == "" {
+		return nil, fmt.Errorf("DASHBOARD_PASSWORD is required")
 	}
 
 	return cfg, nil
