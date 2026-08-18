@@ -23,6 +23,7 @@ func New(cfg *config.Config, db *sql.DB) *http.Server {
 	mux.HandleFunc("GET /api/events", listEventsHandler(db))
 	mux.HandleFunc("GET /api/orders", listOrdersHandler(db))
 	mux.HandleFunc("GET /api/dlq", listDLQHandler(db))
+	mux.HandleFunc("POST /api/dlq/{id}/replay", replayDLQHandler(db))
 
 	return &http.Server{
 		Addr:    ":" + cfg.Port,

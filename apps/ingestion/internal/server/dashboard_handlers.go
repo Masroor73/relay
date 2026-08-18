@@ -3,6 +3,7 @@ package server
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"time"
@@ -136,5 +137,62 @@ func listDLQHandler(db *sql.DB) http.HandlerFunc {
 		}
 
 		writeJSON(w, results)
+	}
+}
+
+func replayDLQHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		dlqID := r.PathValue("id")
+
+		tx, err := db.BeginTx(r.Context(), nil)
+		if err != nil {
+			slog.Error("failed to begin transaction", "error", err)
+			http.Error(w, "internal error", http.StatusInternalServerError)
+			return
+		}
+		defer func() {
+			if err := tx.Rollback(); err != nil && !errors.Is(err, sql.ErrTxDone) {
+				slog.Error("failed to rollback transaction", "error", err)
+			}
+		}()
+
+		var eventID string
+		err = tx.QueryRowContext(r.Context(),
+			`SELECT event_id FROM dead_letter_events WHERE dlq_id = $1`, dlqID,
+		).Scan(&eventID)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				http.Error(w, "dead-letter event not found", http.StatusNotFound)
+				return
+			}
+			slog.Error("failed to look up dead-letter event", "error", err)
+			http.Error(w, "internal error", http.StatusInternalServerError)
+			return
+		}
+
+		_, err = tx.ExecContext(r.Context(),
+			`INSERT INTO outbox (event_id, attempt_count, next_attempt_at) VALUES ($1, 0, now())`,
+			eventID,
+		)
+		if err != nil {
+			slog.Error("failed to re-insert outbox row", "event_id", eventID, "error", err)
+			http.Error(w, "internal error", http.StatusInternalServerError)
+			return
+		}
+
+		if _, err := tx.ExecContext(r.Context(), `DELETE FROM dead_letter_events WHERE dlq_id = $1`, dlqID); err != nil {
+			slog.Error("failed to delete dead-letter row", "event_id", eventID, "error", err)
+			http.Error(w, "internal error", http.StatusInternalServerError)
+			return
+		}
+
+		if err := tx.Commit(); err != nil {
+			slog.Error("failed to commit replay transaction", "event_id", eventID, "error", err)
+			http.Error(w, "internal error", http.StatusInternalServerError)
+			return
+		}
+
+		slog.Info("dead-letter event replayed", "event_id", eventID)
+		w.WriteHeader(http.StatusOK)
 	}
 }
