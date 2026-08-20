@@ -15,11 +15,6 @@ func New(cfg *config.Config, db *sql.DB) *http.Server {
 
 	mux.HandleFunc("GET /health", healthHandler)
 	mux.HandleFunc("POST /webhooks/stripe", rateLimitMiddleware(limiter, stripeWebhookHandler(db, cfg.StripeWebhookSecret)))
-
-	// Dashboard read endpoints - unauthenticated for now. ENG-35 adds the
-	// shared-password auth middleware these will be wrapped in; shipping
-	// them separately mirrors how /webhooks/stripe itself landed (ENG-9)
-	// before its own protections (ENG-11/ENG-12) were added.
 	mux.HandleFunc("GET /api/events", dashboardAuthMiddleware(cfg.DashboardPassword, listEventsHandler(db)))
 	mux.HandleFunc("GET /api/orders", dashboardAuthMiddleware(cfg.DashboardPassword, listOrdersHandler(db)))
 	mux.HandleFunc("GET /api/dlq", dashboardAuthMiddleware(cfg.DashboardPassword, listDLQHandler(db)))
@@ -27,6 +22,6 @@ func New(cfg *config.Config, db *sql.DB) *http.Server {
 
 	return &http.Server{
 		Addr:    ":" + cfg.Port,
-		Handler: mux,
+		Handler: corsMiddleware(cfg.DashboardOrigin, mux),
 	}
 }

@@ -13,6 +13,7 @@ type Config struct {
 	DatabaseURL         string
 	StripeWebhookSecret string
 	DashboardPassword   string
+	DashboardOrigin     string
 }
 
 // Load reads configuration for the ingestion service and returns an error
@@ -23,6 +24,7 @@ func Load() (*Config, error) {
 		DatabaseURL:         os.Getenv("DATABASE_URL"),
 		StripeWebhookSecret: os.Getenv("STRIPE_WEBHOOK_SECRET"),
 		DashboardPassword:   os.Getenv("DASHBOARD_PASSWORD"),
+		DashboardOrigin:     getEnvOrDefault("DASHBOARD_ORIGIN", "http://localhost:5173"),
 	}
 
 	if cfg.DatabaseURL == "" {
