@@ -7,6 +7,33 @@ on:
     branches: [main]
 
 jobs:
+  dashboard-build-lint:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/dashboard
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Enable Corepack (pnpm)
+        run: corepack enable
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm run lint
+
+      - name: Build (type-checks via tsc -b, then bundles)
+        run: pnpm run build
+        
   build-lint-test:
     runs-on: ubuntu-latest
     defaults:
