@@ -196,3 +196,26 @@ func replayDLQHandler(db *sql.DB) http.HandlerFunc {
 		w.WriteHeader(http.StatusOK)
 	}
 }
+
+func getDLQEntryHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		dlqID := r.PathValue("id")
+
+		var d dlqResponse
+		err := db.QueryRowContext(r.Context(),
+			`SELECT dlq_id, event_id, final_error, moved_at FROM dead_letter_events WHERE dlq_id = $1`,
+			dlqID,
+		).Scan(&d.DLQID, &d.EventID, &d.FinalError, &d.MovedAt)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				http.Error(w, "dead-letter event not found", http.StatusNotFound)
+				return
+			}
+			slog.Error("failed to look up dead-letter event", "error", err)
+			http.Error(w, "internal error", http.StatusInternalServerError)
+			return
+		}
+
+		writeJSON(w, d)
+	}
+}
