@@ -4,6 +4,8 @@ import { loadConfig } from './config.js';
 import { ApiClient } from './apiClient.js';
 import { registerListDlqEventsTool } from './tools/listDlqEvents.js';
 import { registerInspectDlqEventTool } from './tools/inspectDlqEvent.js';
+import { registerReplayDlqEventTool } from './tools/replayDlqEvent.js';
+
 
 const config = loadConfig();
 const apiClient = new ApiClient(config);
@@ -15,8 +17,7 @@ const server = new McpServer({
 
 registerListDlqEventsTool(server, apiClient);
 registerInspectDlqEventTool(server, apiClient);
-
-// replay_dlq_event (ENG-46) registered here.
+registerReplayDlqEventTool(server, apiClient);
 
 const transport = new StdioServerTransport();
 await server.connect(transport);
