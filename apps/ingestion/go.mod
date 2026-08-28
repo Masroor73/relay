@@ -1,6 +1,6 @@
 module github.com/Masroor73/relay/apps/ingestion
 
-go 1.26.3
+go 1.26.7
 
 require (
 	github.com/golang-migrate/migrate/v4 v4.19.1
@@ -14,6 +14,6 @@ require (
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/lib/pq v1.10.9 // indirect
-	golang.org/x/sync v0.18.0 // indirect
-	golang.org/x/text v0.31.0 // indirect
+	golang.org/x/sync v0.21.0 // indirect
+	golang.org/x/text v0.39.0 // indirect
 )
