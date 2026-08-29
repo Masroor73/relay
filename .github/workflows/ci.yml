@@ -82,6 +82,11 @@ jobs:
           --health-timeout 5s
           --health-retries 10
 
+    env:
+      DATABASE_URL: postgres://relay:relay_dev_only@localhost:5432/relay
+      API_BASE_URL: http://localhost:8080
+      DASHBOARD_PASSWORD: test_dashboard_pw
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -102,6 +107,31 @@ jobs:
 
       - name: Build
         run: pnpm run build
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.7'
+
+      - name: Build and run cmd/server in the background
+        working-directory: apps/ingestion
+        run: |
+          go build -o /tmp/relay-server ./cmd/server
+          go run ./cmd/migrate
+          STRIPE_WEBHOOK_SECRET=whsec_ci_placeholder DASHBOARD_ORIGIN=http://localhost:5173 DASHBOARD_PASSWORD=test_dashboard_pw /tmp/relay-server &
+          echo "Waiting for cmd/server to become healthy..."
+          for i in $(seq 1 15); do
+            if curl -sf http://localhost:8080/health > /dev/null; then
+              echo "cmd/server is healthy"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "cmd/server did not become healthy in time"
+          exit 1
+
+      - name: Run MCP tool tests against the live server
+        run: pnpm run test
 
   dashboard-build-lint:
     runs-on: ubuntu-latest
